@@ -1,27 +1,25 @@
 # 🛡️ PhishGuard AI — Phishing Detection System
 
 ## 🔍 About Project
-PhishGuard AI is a cybersecurity project that detects phishing websites using machine learning.
+PhishGuard AI is a cybersecurity project that detects phishing websites using machine learning and intelligent analysis.
 
 ## ⚙️ Features
-- Detect phishing URLs
-- Machine learning model (.pkl)
-- Interactive dashboard (HTML UI)
+- 🔗 Detect phishing URLs
+- 🧠 Machine learning model (.pkl)
+- 🖥️ Interactive dashboard (HTML UI)
 
-## 🛠️ Tech Used
+## 🛠️ Tech Stack
 - Python
-- Streamlit / Flask
-- Machine Learning (Scikit-learn)
+- Flask / Streamlit
+- Scikit-learn
 
-## 📁 Project Files
-- app.py → main backend
-- phishing_model.pkl → trained model
-- phishguard_dashboard.html → frontend UI
+## 📁 Project Structure
+- app.py → Backend logic
+- phishing_model.pkl → Trained ML model
+- phishguard_dashboard.html → Frontend UI
 
 ## 🚀 How to Run
-1. Install dependencies:
-pip install -r requirements.txt
 
-2. Run:
-python app.py# phishing-detection-project
-AI-based phishing detection system
+```bash
+pip install -r requirements.txt
+python app.py
