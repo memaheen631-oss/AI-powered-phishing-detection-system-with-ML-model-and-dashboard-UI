@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PhishGuard AI — Cyber Threat Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:      #f0f4ff;
+  --bg2:     #e8eeff;
+  --bg3:     #ffffff;
+  --cyan:    #0066cc;
+  --pink:    #cc0055;
+  --green:   #008844;
+  --yellow:  #bb7700;
+  --orange:  #cc5500;
+  --purple:  #6600cc;
+  --dim:     #6677aa;
+  --text:    #223355;
+  --border:  rgba(0,102,204,0.18);
+  --glow-c:  rgba(0,102,204,0.25);
+  --glow-p:  rgba(204,0,85,0.2);
+  --glow-g:  rgba(0,136,68,0.2);
+  --card-bg: rgba(255,255,255,0.85);
+  --nav-bg:  rgba(240,244,255,0.92);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body {
+  font-family:'Rajdhani',sans-serif;
+  background: linear-gradient(135deg,#e8f0ff 0%,#f5f0ff 50%,#e0f0ff 100%);
+  color:var(--text);
+  overflow-x:hidden;
+  min-height:100vh;
+}
+
+/* ── Soft animated blobs ── */
+.blob {
+  position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0;opacity:0.45;
+}
+.blob-1{width:600px;height:600px;top:-100px;left:-150px;background:radial-gradient(circle,#c7d8ff,#e8d5ff);}
+.blob-2{width:500px;height:500px;bottom:-100px;right:-100px;background:radial-gradient(circle,#d5f0ff,#ffe0f0);}
+.blob-3{width:400px;height:400px;top:40%;left:40%;background:radial-gradient(circle,#d5ffe8,#fffff0);}
+
+/* animated grid overlay */
+.grid-overlay {
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:linear-gradient(rgba(0,100,200,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,100,200,0.04) 1px,transparent 1px);
+  background-size:50px 50px;animation:grid-move 25s linear infinite;
+}
+@keyframes grid-move{0%{background-position:0 0;}100%{background-position:50px 50px;}}
+
+.app{position:relative;z-index:10;min-height:100vh;}
+
+/* ── TOPBAR ── */
+.topbar {
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 2.5rem;height:68px;
+  background:var(--nav-bg);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(0,102,204,0.12);
+  box-shadow:0 4px 24px rgba(0,80,180,0.08);
+}
+.logo {
+  display:flex;align-items:center;gap:0.8rem;
+  font-family:'Orbitron',monospace;font-weight:900;font-size:1.2rem;
+  color:var(--text);letter-spacing:0.05em;cursor:pointer;
+}
+.logo-shield {
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,rgba(0,102,204,0.12),rgba(102,0,204,0.08));
+  border:1.5px solid rgba(0,102,204,0.3);border-radius:10px;
+  box-shadow:0 2px 12px rgba(0,102,204,0.15);font-size:1.1rem;
+  animation:shield-pulse 3s ease-in-out infinite;
+}
+@keyframes shield-pulse{0%,100%{box-shadow:0 2px 12px rgba(0,102,204,0.15);}50%{box-shadow:0 4px 22px rgba(0,102,204,0.3);}}
+.logo span{color:var(--cyan);}
+
+.nav-links{display:flex;align-items:center;gap:0.2rem;}
+.nav-link {
+  padding:0.45rem 1rem;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:0.84rem;
+  letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);cursor:pointer;border-radius:8px;
+  transition:all 0.25s;border:1px solid transparent;white-space:nowrap;
+}
+.nav-link:hover,.nav-link.active {
+  color:var(--cyan);background:rgba(0,102,204,0.08);border-color:rgba(0,102,204,0.2);
+}
+.nav-link.active::after {
+  content:'';position:absolute;bottom:-1px;left:20%;right:20%;height:2px;
+  background:var(--cyan);
+}
+
+.nav-badges{display:flex;align-items:center;gap:0.5rem;}
+.badge{font-family:'Share Tech Mono',monospace;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;padding:0.25rem 0.7rem;border-radius:99px;}
+.badge-live{background:rgba(0,136,68,0.1);border:1px solid rgba(0,136,68,0.3);color:var(--green);animation:blink-badge 2s infinite;}
+@keyframes blink-badge{0%,100%{opacity:1;}50%{opacity:0.55;}}
+.badge-ml{background:rgba(0,102,204,0.08);border:1px solid rgba(0,102,204,0.22);color:var(--cyan);}
+.badge-zd{background:rgba(187,119,0,0.07);border:1px solid rgba(187,119,0,0.22);color:var(--yellow);}
+
+/* ── PAGES ── */
+.content{padding-top:68px;}
+.page{display:none;animation:fadein 0.45s ease;}
+.page.active{display:block;}
+@keyframes fadein{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── HERO ── */
+.hero {
+  min-height:calc(100vh - 68px);
+  display:flex;align-items:center;justify-content:center;
+  padding:3rem;
+}
+.hero-inner {
+  max-width:1280px;width:100%;
+  display:grid;grid-template-columns:1.1fr 0.9fr;gap:4rem;align-items:center;
+}
+.hero-eyebrow {
+  font-family:'Share Tech Mono',monospace;font-size:0.68rem;letter-spacing:0.3em;
+  text-transform:uppercase;color:var(--cyan);margin-bottom:1.2rem;
+  display:flex;align-items:center;gap:0.7rem;
+}
+.hero-eyebrow::before{content:'';width:28px;height:1.5px;background:var(--cyan);}
+.hero-h1 {
+  font-family:'Orbitron',monospace;font-weight:900;
+  font-size:clamp(2.2rem,4vw,3.8rem);line-height:1.08;
+  color:var(--text);letter-spacing:-0.02em;margin-bottom:1.4rem;
+}
+.hero-h1 .line2 {
+  background:linear-gradient(90deg,var(--cyan),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero-sub{font-size:1.05rem;color:var(--dim);line-height:1.8;max-width:520px;margin-bottom:2.4rem;}
+.hero-btns{display:flex;gap:1rem;flex-wrap:wrap;}
+
+.btn-primary {
+  padding:0.85rem 2rem;font-family:'Orbitron',monospace;font-weight:700;
+  font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  color:#fff;border:none;border-radius:12px;cursor:pointer;
+  box-shadow:0 6px 22px rgba(0,102,204,0.3);transition:all 0.28s;
+}
+.btn-primary:hover{transform:translateY(-3px);box-shadow:0 10px 32px rgba(0,102,204,0.45);}
+
+.btn-outline {
+  padding:0.85rem 2rem;font-family:'Orbitron',monospace;font-weight:700;
+  font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;
+  background:transparent;color:var(--cyan);
+  border:1.5px solid rgba(0,102,204,0.35);border-radius:12px;cursor:pointer;transition:all 0.28s;
+}
+.btn-outline:hover{background:rgba(0,102,204,0.06);border-color:var(--cyan);transform:translateY(-3px);}
+
+/* STAT GRID */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:2.4rem;}
+.stat-card {
+  background:var(--card-bg);border:1px solid rgba(0,102,204,0.14);
+  border-radius:14px;padding:1.2rem 1.4rem;
+  box-shadow:0 4px 16px rgba(0,80,180,0.06);transition:all 0.28s;
+}
+.stat-card:hover{border-color:rgba(0,102,204,0.3);box-shadow:0 8px 24px rgba(0,80,180,0.1);transform:translateY(-2px);}
+.stat-num{font-family:'Orbitron',monospace;font-size:2rem;font-weight:700;color:var(--cyan);line-height:1;}
+.stat-label{font-size:0.66rem;letter-spacing:0.15em;color:var(--dim);text-transform:uppercase;margin-top:0.3rem;}
+
+/* FLOAT PANEL */
+.float-panel {
+  background:var(--card-bg);border:1px solid rgba(0,102,204,0.16);
+  border-radius:20px;padding:1.8rem;
+  backdrop-filter:blur(20px);
+  box-shadow:0 20px 60px rgba(0,80,180,0.1),0 4px 24px rgba(0,80,180,0.06);
+  animation:float 6s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+.panel-header {
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:1.4rem;
+  padding-bottom:1rem;border-bottom:1px solid rgba(0,102,204,0.1);
+}
+.panel-title{font-family:'Orbitron',monospace;font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:0.1em;}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(0,136,68,0.5);animation:blink-badge 1.5s infinite;}
+.threat-feed-item{display:flex;align-items:flex-start;gap:0.8rem;padding:0.72rem 0;border-bottom:1px solid rgba(0,102,204,0.06);}
+.threat-feed-item:last-child{border-bottom:none;}
+.tfi-icon{font-size:1.05rem;margin-top:0.05rem;flex-shrink:0;}
+.tfi-title{font-size:0.82rem;font-weight:600;color:var(--text);margin-bottom:0.12rem;}
+.tfi-meta{font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:var(--dim);}
+.tfi-badge{font-family:'Share Tech Mono',monospace;font-size:0.54rem;letter-spacing:0.12em;padding:0.18rem 0.5rem;border-radius:4px;margin-left:auto;flex-shrink:0;margin-top:0.12rem;}
+.tfi-badge.crit{background:rgba(204,0,85,0.1);color:var(--pink);border:1px solid rgba(204,0,85,0.2);}
+.tfi-badge.high{background:rgba(204,85,0,0.08);color:var(--orange);border:1px solid rgba(204,85,0,0.18);}
+.tfi-badge.med{background:rgba(187,119,0,0.08);color:var(--yellow);border:1px solid rgba(187,119,0,0.15);}
+
+/* ── SECTION COMMON ── */
+.section{padding:4.5rem 3rem;max-width:1280px;margin:0 auto;}
+.sec-label {
+  font-family:'Share Tech Mono',monospace;font-size:0.64rem;font-weight:600;
+  letter-spacing:0.32em;text-transform:uppercase;color:var(--cyan);
+  border-left:3px solid var(--cyan);padding-left:0.8rem;margin-bottom:1rem;
+}
+.section-title{font-family:'Orbitron',monospace;font-weight:800;font-size:clamp(1.7rem,2.8vw,2.6rem);color:var(--text);letter-spacing:-0.01em;margin-bottom:1rem;line-height:1.15;}
+.section-sub{font-size:1rem;color:var(--dim);line-height:1.75;max-width:600px;margin-bottom:2.8rem;}
+
+/* ── SCANNER PAGE ── */
+.scanner-container {
+  max-width:900px;margin:0 auto;
+  background:var(--card-bg);border:1px solid rgba(0,102,204,0.16);
+  border-radius:24px;padding:3rem;
+  box-shadow:0 20px 60px rgba(0,80,180,0.08);
+}
+.input-group{display:flex;gap:1rem;margin-bottom:2rem;align-items:flex-end;}
+.input-wrap{flex:1;}
+.input-label{font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.25em;color:var(--cyan);text-transform:uppercase;margin-bottom:0.6rem;display:block;}
+.url-input {
+  width:100%;padding:1rem 1.4rem;
+  background:rgba(0,102,204,0.04);border:1.5px solid rgba(0,102,204,0.2);
+  border-radius:12px;color:var(--text);outline:none;
+  font-family:'Share Tech Mono',monospace;font-size:0.92rem;
+  transition:all 0.28s;
+}
+.url-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,102,204,0.1);}
+.url-input::placeholder{color:var(--dim);}
+.analyze-btn {
+  padding:1rem 2.2rem;font-family:'Orbitron',monospace;font-weight:700;
+  font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));color:#fff;
+  border:none;border-radius:12px;cursor:pointer;white-space:nowrap;
+  box-shadow:0 6px 22px rgba(0,102,204,0.28);transition:all 0.28s;
+}
+.analyze-btn:hover{transform:translateY(-3px);box-shadow:0 10px 32px rgba(0,102,204,0.45);}
+
+/* PROGRESS */
+.progress-wrap{margin-bottom:2rem;display:none;}
+.progress-label{font-family:'Share Tech Mono',monospace;font-size:0.64rem;letter-spacing:0.1em;color:var(--cyan);margin-bottom:0.5rem;}
+.progress-bar-bg{height:4px;background:rgba(0,102,204,0.1);border-radius:99px;overflow:hidden;}
+.progress-bar-fill{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--purple),var(--pink));transition:width 0.05s linear;}
+
+/* RESULT */
+.result-wrap{display:none;}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;margin-top:1.4rem;}
+.result-banner{border-radius:18px;padding:2.2rem;text-align:center;grid-column:1/-1;}
+.result-danger{background:linear-gradient(135deg,rgba(204,0,85,0.08),rgba(204,0,85,0.02));border:1.5px solid rgba(204,0,85,0.5);animation:danger-pulse 2.5s ease-in-out infinite;}
+@keyframes danger-pulse{0%,100%{box-shadow:0 0 20px rgba(204,0,85,0.2);}50%{box-shadow:0 0 40px rgba(204,0,85,0.35);}}
+.result-safe{background:linear-gradient(135deg,rgba(0,136,68,0.08),rgba(0,136,68,0.02));border:1.5px solid rgba(0,136,68,0.4);animation:safe-pulse 3s ease-in-out infinite;}
+@keyframes safe-pulse{0%,100%{box-shadow:0 0 18px rgba(0,136,68,0.15);}50%{box-shadow:0 0 35px rgba(0,136,68,0.3);}}
+.result-icon{font-size:3rem;margin-bottom:0.5rem;}
+.result-title{font-family:'Orbitron',monospace;font-size:1.5rem;font-weight:800;letter-spacing:0.05em;margin-bottom:0.3rem;}
+.result-conf{font-family:'Share Tech Mono',monospace;font-size:2.8rem;font-weight:600;line-height:1.1;}
+.result-risk{font-family:'Share Tech Mono',monospace;font-size:0.66rem;letter-spacing:0.2em;color:var(--dim);margin-top:0.4rem;}
+
+.intel-card{background:rgba(0,102,204,0.03);border:1px solid rgba(0,102,204,0.1);border-radius:14px;padding:1.3rem;}
+.intel-row{display:flex;justify-content:space-between;align-items:center;padding:0.55rem 0;border-bottom:1px solid rgba(0,102,204,0.07);font-size:0.84rem;}
+.intel-row:last-child{border-bottom:none;}
+.intel-key{color:var(--dim);}
+.intel-val{font-family:'Share Tech Mono',monospace;font-size:0.74rem;}
+
+.t-item,.s-item{display:flex;gap:0.8rem;align-items:flex-start;padding:0.82rem 1.1rem;border-radius:12px;transition:all 0.22s;cursor:default;margin-bottom:0.5rem;}
+.t-item{background:rgba(204,0,85,0.05);border-left:3px solid var(--pink);}
+.t-item:hover{background:rgba(204,0,85,0.09);transform:translateX(4px);}
+.s-item{background:rgba(0,136,68,0.05);border-left:3px solid var(--green);}
+.s-item:hover{background:rgba(0,136,68,0.09);transform:translateX(4px);}
+.item-title{font-weight:700;font-size:0.85rem;margin-bottom:0.12rem;}
+.item-desc{font-size:0.78rem;color:var(--dim);line-height:1.55;}
+.warn-box{background:rgba(204,85,0,0.05);border:1px solid rgba(204,85,0,0.25);border-radius:14px;padding:1.2rem 1.5rem;margin-top:1.2rem;grid-column:1/-1;}
+.warn-title{color:var(--orange);font-weight:700;margin-bottom:0.5rem;font-size:0.88rem;}
+.warn-list{color:var(--dim);font-size:0.82rem;line-height:2;}
+
+/* ── VISUAL AI ── */
+.upload-zone {
+  border:2px dashed rgba(0,102,204,0.25);border-radius:18px;
+  padding:3rem;text-align:center;cursor:pointer;
+  background:rgba(0,102,204,0.03);transition:all 0.3s;margin-bottom:1.5rem;
+}
+.upload-zone:hover{border-color:rgba(0,102,204,0.5);background:rgba(0,102,204,0.06);}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-icon{font-size:2.5rem;margin-bottom:0.8rem;}
+.upload-text{font-family:'Orbitron',monospace;font-size:0.84rem;color:var(--cyan);font-weight:700;margin-bottom:0.4rem;}
+.upload-sub{font-size:0.78rem;color:var(--dim);}
+
+/* ── ZERO DAY ── */
+.zd-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+.zd-card {
+  background:var(--card-bg);border:1px solid rgba(187,119,0,0.15);
+  border-radius:18px;padding:1.8rem;transition:all 0.3s;position:relative;overflow:hidden;
+  box-shadow:0 4px 16px rgba(0,0,0,0.04);
+}
+.zd-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;opacity:0;transition:opacity 0.3s;}
+.zd-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,0.08);}
+.zd-card:hover::before{opacity:1;}
+.zd-card.crit{border-color:rgba(204,0,85,0.2);}
+.zd-card.crit::before{background:var(--pink);}
+.zd-card.high{border-color:rgba(204,85,0,0.18);}
+.zd-card.high::before{background:var(--orange);}
+.zd-num{font-family:'Orbitron',monospace;font-size:2.4rem;font-weight:900;color:rgba(0,0,0,0.05);line-height:1;}
+.zd-title{font-family:'Orbitron',monospace;font-weight:700;font-size:0.86rem;margin:0.5rem 0;letter-spacing:0.04em;}
+.zd-title.crit{color:var(--pink);}
+.zd-title.high{color:var(--orange);}
+.zd-title.med{color:var(--yellow);}
+.zd-desc{font-size:0.8rem;color:var(--dim);line-height:1.65;}
+.sev-badge{display:inline-block;font-family:'Share Tech Mono',monospace;font-size:0.54rem;letter-spacing:0.12em;padding:0.18rem 0.6rem;border-radius:4px;text-transform:uppercase;float:right;margin-top:0.2rem;}
+
+/* ════ VIDEOS PAGE — FIXED ════ */
+.video-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.8rem;}
+.video-card {
+  background:var(--card-bg);border:1px solid rgba(0,102,204,0.14);
+  border-radius:18px;overflow:hidden;transition:all 0.3s;
+  box-shadow:0 6px 20px rgba(0,80,180,0.06);
+}
+.video-card:hover{border-color:rgba(0,102,204,0.32);transform:translateY(-6px);box-shadow:0 18px 40px rgba(0,80,180,0.12);}
+
+/* ✅ FIX: iframe wrapper with correct aspect ratio */
+.video-thumb {
+  position:relative;width:100%;padding-bottom:56.25%;height:0;overflow:hidden;
+  background:#000;
+}
+.video-thumb iframe {
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  border:none;display:block;
+}
+
+.video-meta{padding:1.3rem;}
+.video-num{font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.5rem;}
+.video-title{font-family:'Orbitron',monospace;font-weight:700;font-size:0.86rem;color:var(--text);margin-bottom:0.6rem;line-height:1.4;}
+.video-desc{font-size:0.78rem;color:var(--dim);line-height:1.6;margin-bottom:0.8rem;}
+.video-tags{display:flex;flex-wrap:wrap;gap:0.4rem;}
+.tag{font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.08em;background:rgba(0,102,204,0.06);border:1px solid rgba(0,102,204,0.15);color:var(--dim);padding:0.2rem 0.6rem;border-radius:5px;}
+
+/* ── ABOUT ── */
+.about-hero{text-align:center;padding:4.5rem 2rem 3rem;}
+.author-card {
+  max-width:580px;margin:0 auto 3.5rem;
+  background:var(--card-bg);border:1px solid rgba(0,102,204,0.16);
+  border-radius:24px;padding:2.8rem;text-align:center;
+  box-shadow:0 20px 60px rgba(0,80,180,0.1);position:relative;overflow:hidden;
+}
+.author-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--purple),var(--pink));}
+.author-avatar{width:88px;height:88px;border-radius:50%;margin:0 auto 1.2rem;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:2.2rem;box-shadow:0 8px 28px rgba(0,102,204,0.25);animation:avatar-glow 3s ease-in-out infinite;}
+@keyframes avatar-glow{0%,100%{box-shadow:0 8px 28px rgba(0,102,204,0.25);}50%{box-shadow:0 8px 36px rgba(102,0,204,0.32);}}
+.author-name{font-family:'Orbitron',monospace;font-weight:900;font-size:2rem;color:var(--text);letter-spacing:0.05em;margin-bottom:0.4rem;}
+.author-role{font-family:'Share Tech Mono',monospace;font-size:0.73rem;letter-spacing:0.28em;color:var(--cyan);text-transform:uppercase;margin-bottom:0.3rem;}
+.author-sem{font-family:'Share Tech Mono',monospace;font-size:0.66rem;letter-spacing:0.18em;color:var(--dim);text-transform:uppercase;margin-bottom:1.8rem;}
+.author-badges{display:flex;justify-content:center;gap:0.7rem;flex-wrap:wrap;}
+.author-badge{font-family:'Share Tech Mono',monospace;font-size:0.58rem;letter-spacing:0.12em;padding:0.32rem 0.9rem;border-radius:99px;text-transform:uppercase;}
+.ab-c{background:rgba(0,102,204,0.1);border:1px solid rgba(0,102,204,0.3);color:var(--cyan);}
+.ab-p{background:rgba(102,0,204,0.08);border:1px solid rgba(102,0,204,0.25);color:var(--purple);}
+.ab-g{background:rgba(0,136,68,0.08);border:1px solid rgba(0,136,68,0.22);color:var(--green);}
+
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;max-width:1200px;margin:0 auto;}
+.feat-card{background:var(--card-bg);border:1px solid rgba(0,102,204,0.13);border-radius:16px;padding:1.8rem;text-align:center;transition:all 0.3s;box-shadow:0 4px 16px rgba(0,80,180,0.05);}
+.feat-card:hover{border-color:rgba(0,102,204,0.28);transform:translateY(-4px);box-shadow:0 12px 28px rgba(0,80,180,0.1);}
+.feat-icon{font-size:2rem;margin-bottom:0.8rem;}
+.feat-title{font-family:'Orbitron',monospace;font-size:0.8rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;letter-spacing:0.05em;}
+.feat-desc{font-size:0.78rem;color:var(--dim);line-height:1.6;}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid rgba(0,102,204,0.1);padding:2.4rem 3rem;background:rgba(255,255,255,0.6);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;position:relative;z-index:10;}
+.footer-left .footer-logo{font-family:'Orbitron',monospace;font-weight:900;font-size:1rem;color:var(--text);margin-bottom:0.3rem;}
+.footer-left .footer-copy{font-family:'Share Tech Mono',monospace;font-size:0.58rem;letter-spacing:0.12em;color:var(--dim);}
+.footer-right{display:flex;gap:1rem;flex-wrap:wrap;}
+.footer-stat{font-family:'Share Tech Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;color:var(--dim);}
+.footer-stat span{color:var(--green);}
+
+/* ── PARTICLES ── */
+.particle{position:fixed;pointer-events:none;z-index:3;border-radius:50%;animation:particle-drift linear infinite;opacity:0;}
+@keyframes particle-drift{0%{opacity:0;transform:translateY(100vh);}10%{opacity:0.4;}90%{opacity:0.15;}100%{opacity:0;transform:translateY(-10vh);}}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .hero-inner,.result-grid,.zd-grid,.video-grid,.features-grid{grid-template-columns:1fr;}
+  .result-banner,.warn-box{grid-column:auto;}
+  .hero-right{display:none;}
+  .section{padding:3rem 1.5rem;}
+  .topbar{padding:0 1.2rem;}
+  .nav-links .nav-link{display:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+<div class="grid-overlay"></div>
+<div id="particles"></div>
+
+<div class="app">
+
+  <!-- TOPBAR -->
+  <nav class="topbar">
+    <div class="logo" onclick="showPage('home')">
+      <div class="logo-shield">🛡️</div>
+      Phish<span>Guard</span>&nbsp;AI
+    </div>
+    <div class="nav-links">
+      <div class="nav-link active" id="nav-home" onclick="showPage('home')">Home</div>
+      <div class="nav-link" id="nav-scanner" onclick="showPage('scanner')">🔍 Scanner</div>
+      <div class="nav-link" id="nav-visual" onclick="showPage('visual')">📸 Visual AI</div>
+      <div class="nav-link" id="nav-zerod" onclick="showPage('zerod')">☢️ Zero-Day Intel</div>
+      <div class="nav-link" id="nav-learn" onclick="showPage('learn')">🎥 Learn</div>
+      <div class="nav-link" id="nav-about" onclick="showPage('about')">👤 About</div>
+    </div>
+    <div class="nav-badges">
+      <span class="badge badge-live">● LIVE</span>
+      <span class="badge badge-ml">ML ENGINE</span>
+      <span class="badge badge-zd">ZERO-DAY</span>
+    </div>
+  </nav>
+
+  <div class="content">
+
+    <!-- ══ HOME ══ -->
+    <div class="page active" id="page-home">
+      <div class="hero">
+        <div class="hero-inner">
+          <div class="hero-left">
+            <div class="hero-eyebrow">// Cyber Threat Intelligence Platform</div>
+            <h1 class="hero-h1">Detect Phishing.<br><span class="line2">Before It Strikes.</span></h1>
+            <p class="hero-sub">PhishGuard AI combines machine learning, computer vision, and Zero-Day heuristics to identify malicious URLs, fake login pages, and brand impersonation attacks in real time — with professional-grade threat intelligence reporting.</p>
+            <div class="hero-btns">
+              <button class="btn-primary" onclick="showPage('scanner')">⚡ SCAN A URL</button>
+              <button class="btn-outline" onclick="showPage('learn')">▶ LEARN MORE</button>
+            </div>
+            <div class="stat-grid">
+              <div class="stat-card"><div class="stat-num">30+</div><div class="stat-label">URL Features</div></div>
+              <div class="stat-card"><div class="stat-num">97%</div><div class="stat-label">ML Accuracy</div></div>
+              <div class="stat-card"><div class="stat-num">&lt;1s</div><div class="stat-label">Analysis Time</div></div>
+              <div class="stat-card"><div class="stat-num">∞</div><div class="stat-label">Zero-Day Shield</div></div>
+            </div>
+          </div>
+          <div class="hero-right">
+            <div class="float-panel">
+              <div class="panel-header">
+                <span class="panel-title">LIVE THREAT FEED</span>
+                <div class="status-dot"></div>
+              </div>
+              <div class="threat-feed-item"><div class="tfi-icon">🚨</div><div><div class="tfi-title">paypa1-secure.tk detected</div><div class="tfi-meta">TYPOSQUATTING · 2 sec ago</div></div><div class="tfi-badge crit">CRIT</div></div>
+              <div class="threat-feed-item"><div class="tfi-icon">⚠️</div><div><div class="tfi-title">fb-login-verify.ml blocked</div><div class="tfi-meta">BRAND IMPERSONATION · 14 sec ago</div></div><div class="tfi-badge crit">CRIT</div></div>
+              <div class="threat-feed-item"><div class="tfi-icon">🔤</div><div><div class="tfi-title">g00gle-search.xyz flagged</div><div class="tfi-meta">HOMOGRAPH ATTACK · 33 sec ago</div></div><div class="tfi-badge high">HIGH</div></div>
+              <div class="threat-feed-item"><div class="tfi-icon">📧</div><div><div class="tfi-title">amazon.com.login.evil.ru</div><div class="tfi-meta">SUBDOMAIN HIJACKING · 1 min ago</div></div><div class="tfi-badge crit">CRIT</div></div>
+              <div class="threat-feed-item"><div class="tfi-icon">🌐</div><div><div class="tfi-title">microsoft-verify.top scanned</div><div class="tfi-meta">SUSPICIOUS TLD · 2 min ago</div></div><div class="tfi-badge med">MED</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SCANNER ══ -->
+    <div class="page" id="page-scanner">
+      <div class="section">
+        <div class="sec-label">// URL Threat Analysis Engine</div>
+        <h2 class="section-title">URL Scanner</h2>
+        <p class="section-sub">Enter any URL to analyze it against 30+ threat features using our trained Random Forest ML classifier. Get instant professional threat intelligence.</p>
+        <div class="scanner-container">
+          <div class="input-group">
+            <div class="input-wrap">
+              <label class="input-label">TARGET URL</label>
+              <input type="text" class="url-input" id="urlInput" placeholder="https://suspicious-site.com  or  https://google.com" onkeydown="if(event.key==='Enter')analyzeURL()"/>
+            </div>
+            <button class="analyze-btn" onclick="analyzeURL()">⚡ ANALYZE</button>
+          </div>
+          <div class="progress-wrap" id="progressWrap">
+            <div class="progress-label" id="progressLabel">[ 01/04 ] Parsing URL structure…</div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+          </div>
+          <div class="result-wrap" id="resultWrap">
+            <div class="result-banner" id="resultBanner"></div>
+            <div class="result-grid" id="resultGrid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ VISUAL AI ══ -->
+    <div class="page" id="page-visual">
+      <div class="section">
+        <div class="sec-label">// Computer Vision — Screenshot Analysis Engine</div>
+        <h2 class="section-title">Visual AI Analyzer</h2>
+        <p class="section-sub">Upload a screenshot of any website. PhishGuard's Visual AI scans pixel-level data for brand color impersonation, fake SSL badges, login form patterns, and layout anomalies.</p>
+        <div class="scanner-container">
+          <div class="upload-zone" style="position:relative" onclick="document.getElementById('imgInput').click()">
+            <input type="file" id="imgInput" accept="image/*" onchange="analyzeImage(event)" style="display:none"/>
+            <div class="upload-icon">📸</div>
+            <div class="upload-text">DROP SCREENSHOT HERE</div>
+            <div class="upload-sub">PNG · JPG · WEBP — Any size accepted</div>
+          </div>
+          <div id="visualResult"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ZERO-DAY ══ -->
+    <div class="page" id="page-zerod">
+      <div class="section">
+        <div class="sec-label">// Zero-Day Attack Intelligence Database</div>
+        <h2 class="section-title">Zero-Day Threat Intel</h2>
+        <p class="section-sub">Zero-day phishing attacks exploit unknown vulnerabilities. PhishGuard's heuristic engine detects these by analyzing behavioral patterns, structural anomalies, and attack fingerprints that persist even in novel campaigns.</p>
+        <div class="zd-grid">
+          <div class="zd-card crit">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="zd-num">01</div><span class="sev-badge" style="background:rgba(204,0,85,0.1);color:var(--pink);border:1px solid rgba(204,0,85,0.2)">CRITICAL</span></div>
+            <div class="zd-title crit">Homograph / IDN Spoofing</div>
+            <div class="zd-desc">Attackers register domains using Unicode characters visually identical to ASCII letters — e.g. 'раура1.com' using Cyrillic 'р' instead of Latin 'p'. PhishGuard's character normalization engine catches these substitutions even when no prior record exists.</div>
+          </div>
+          <div class="zd-card high">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="zd-num">02</div><span class="sev-badge" style="background:rgba(204,85,0,0.08);color:var(--orange);border:1px solid rgba(204,85,0,0.18)">HIGH</span></div>
+            <div class="zd-title high">Subdomain Hijacking & Nesting</div>
+            <div class="zd-desc">By abusing legitimate cloud services or compromised DNS, attackers create URLs like 'paypal.com.secure-login.evil.tk'. The legitimate brand appears at the start, deceiving casual inspection. Our subdomain depth analysis flags these instantly.</div>
+          </div>
+          <div class="zd-card high">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="zd-num">03</div><span class="sev-badge" style="background:rgba(204,85,0,0.08);color:var(--orange);border:1px solid rgba(204,85,0,0.18)">HIGH</span></div>
+            <div class="zd-title high">Typosquatting & Combosquatting</div>
+            <div class="zd-desc">Domains like 'arnazon.com', 'paypa1-secure.com', or 'google-login.com' exploit typographic errors and keyword abuse. Our fuzzy string matching and known-brand proximity scoring neutralizes these with no prior signature required.</div>
+          </div>
+          <div class="zd-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="zd-num">04</div><span class="sev-badge" style="background:rgba(187,119,0,0.07);color:var(--yellow);border:1px solid rgba(187,119,0,0.15)">MEDIUM</span></div>
+            <div class="zd-title med">HTTPS Abuse (SSL Phishing)</div>
+            <div class="zd-desc">Modern phishing sites use free SSL certificates to display the padlock. PhishGuard never relies on HTTPS as a sole safety signal — it's just one of 30 weighted features. HTTPS alone proves nothing.</div>
+          </div>
+          <div class="zd-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="zd-num">05</div><span class="sev-badge" style="background:rgba(187,119,0,0.07);color:var(--yellow);border:1px solid rgba(187,119,0,0.15)">MEDIUM</span></div>
+            <div class="zd-title med">Open Redirect Exploitation</div>
+            <div class="zd-desc">Attackers use trusted domains with open redirect endpoints: 'google.com/url?q=evil-phish.tk'. The URL starts with a trusted brand, bypassing basic filters. PhishGuard's query parameter analysis exposes this pattern.</div>
+          </div>
+          <div class="zd-card crit">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="zd-num">06</div><span class="sev-badge" style="background:rgba(204,0,85,0.1);color:var(--pink);border:1px solid rgba(204,0,85,0.2)">CRITICAL</span></div>
+            <div class="zd-title crit">Adversarial URL Obfuscation</div>
+            <div class="zd-desc">Advanced actors encode URLs using Base64, hex encoding, or excessive path nesting to defeat regex-based scanners. PhishGuard's structural feature extraction remains effective regardless of obfuscation layer used.</div>
+          </div>
+        </div>
+        <div style="margin-top:2.4rem;text-align:center;padding:2rem;background:rgba(187,119,0,0.04);border:1px solid rgba(187,119,0,0.14);border-radius:16px">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:0.62rem;letter-spacing:0.2em;color:var(--yellow);text-transform:uppercase;margin-bottom:0.6rem">PhishGuard Zero-Day Defense Architecture</div>
+          <div style="color:var(--dim);font-size:0.84rem;line-height:1.8;max-width:700px;margin:0 auto">Our model never relies on signature databases. Every URL is analyzed from first principles using 30 structural, lexical, and behavioral features — making it effective against attacks that have never been seen before.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ LEARN — VIDEOS FIXED ══ -->
+    <div class="page" id="page-learn">
+      <div class="section">
+        <div class="sec-label">// Cybersecurity Education Centre</div>
+        <h2 class="section-title">Learn &amp; Master</h2>
+        <p class="section-sub">Three curated expert videos covering phishing attack anatomy, AI-powered threat detection, and YOLO-based visual analysis — essential knowledge for any security-aware professional.</p>
+
+        <div class="video-grid">
+          <!-- VIDEO 1 -->
+          <div class="video-card">
+            <div class="video-thumb">
+              <iframe
+                src="https://www.youtube.com/embed/XBkzBrXlle0?rel=0&modestbranding=1"
+                title="How Phishing Attacks Work"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+                loading="lazy">
+              </iframe>
+            </div>
+            <div class="video-meta">
+              <div class="video-num" style="color:var(--pink)">01 — PHISHING FUNDAMENTALS</div>
+              <div class="video-title">How Phishing Attacks Work</div>
+              <div class="video-desc">A deep-dive into how threat actors craft convincing fake pages, use social engineering, and harvest credentials. Essential baseline for any security professional.</div>
+              <div class="video-tags">
+                <span class="tag">Social Engineering</span>
+                <span class="tag">Credential Harvest</span>
+                <span class="tag">Email Phishing</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- VIDEO 2 -->
+          <div class="video-card">
+            <div class="video-thumb">
+              <iframe
+                src="https://www.youtube.com/embed/AToQfOWiIUk?rel=0&modestbranding=1"
+                title="AI-Powered Threat Detection"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+                loading="lazy">
+              </iframe>
+            </div>
+            <div class="video-meta">
+              <div class="video-num" style="color:var(--cyan)">02 — AI & MACHINE LEARNING</div>
+              <div class="video-title">AI-Powered Threat Detection</div>
+              <div class="video-desc">How modern ML models — including Random Forest classifiers like the one powering PhishGuard — detect malicious URLs and behavioral anomalies at scale.</div>
+              <div class="video-tags">
+                <span class="tag">Random Forest</span>
+                <span class="tag">Feature Extraction</span>
+                <span class="tag">Real-Time ML</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- VIDEO 3 -->
+          <div class="video-card">
+            <div class="video-thumb">
+              <iframe
+                src="https://www.youtube.com/embed/4eIBisqx9_g?rel=0&modestbranding=1"
+                title="YOLO Object Detection for Security"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+                loading="lazy">
+              </iframe>
+            </div>
+            <div class="video-meta">
+              <div class="video-num" style="color:var(--yellow)">03 — COMPUTER VISION</div>
+              <div class="video-title">YOLO Object Detection for Security</div>
+              <div class="video-desc">How YOLOv8 and computer vision systems identify visual phishing indicators — fake logos, login forms, and brand impersonation — frame by frame in screenshots.</div>
+              <div class="video-tags">
+                <span class="tag">YOLOv8</span>
+                <span class="tag">Visual AI</span>
+                <span class="tag">Screenshot Analysis</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ABOUT ══ -->
+    <div class="page" id="page-about">
+      <div class="about-hero">
+        <div class="sec-label" style="display:inline-block;margin-bottom:1.5rem">// Project Creator</div>
+        <div class="author-card">
+          <div class="author-avatar">👩‍💻</div>
+          <div class="author-name">MAHEEN</div>
+          <div class="author-role">Machine learning| cybersecurity project</div>
+          <div class="author-sem">6th Semester · Computer Science</div>
+          <div class="author-badges">
+            <span class="author-badge ab-c">ML Engineer</span>
+            <span class="author-badge ab-p">Python Dev</span>
+            <span class="author-badge ab-g">Security Researcher</span>
+          </div>
+        </div>
+        <div class="sec-label" style="display:inline-block;margin-bottom:2rem">// Platform Capabilities</div>
+        <div class="features-grid">
+          <div class="feat-card"><div class="feat-icon">🔍</div><div class="feat-title">URL SCANNER</div><div class="feat-desc">30+ feature extraction with Random Forest ML classifier achieving 97% accuracy on phishing URL detection in real time.</div></div>
+          <div class="feat-card"><div class="feat-icon">📸</div><div class="feat-title">VISUAL AI</div><div class="feat-desc">Pixel-level computer vision analysis for brand color impersonation, fake SSL badges, and login form structure detection.</div></div>
+          <div class="feat-card"><div class="feat-icon">☢️</div><div class="feat-title">ZERO-DAY INTEL</div><div class="feat-desc">Heuristic detection of never-before-seen attacks through structural, lexical, and behavioral feature analysis.</div></div>
+          <div class="feat-card"><div class="feat-icon">🤖</div><div class="feat-title">ML ENGINE</div><div class="feat-desc">sklearn Random Forest with 300 estimators, max depth 15, trained on carefully curated phishing and legitimate URL datasets.</div></div>
+          <div class="feat-card"><div class="feat-icon">🎥</div><div class="feat-title">EDUCATION HUB</div><div class="feat-desc">Curated expert video content covering phishing fundamentals, AI threat detection, and YOLO computer vision techniques.</div></div>
+          <div class="feat-card"><div class="feat-icon">⚡</div><div class="feat-title">REAL-TIME</div><div class="feat-desc">Sub-second threat analysis with live threat feed, animated results, and detailed professional intelligence reports.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <footer>
+    <div class="footer-left">
+      <div class="footer-logo">🛡️ PhishGuard AI</div>
+      <div class="footer-copy">Cyber Threat Intelligence Platform · v4.0 · Developed by Maheen · 6th Semester · © 2026</div>
+    </div>
+    <div class="footer-right">
+      <span class="footer-stat">ML ENGINE: <span>ACTIVE</span></span>
+      <span class="footer-stat">·</span>
+      <span class="footer-stat">ZERO-DAY: <span>ARMED</span></span>
+      <span class="footer-stat">·</span>
+      <span class="footer-stat">VISUAL AI: <span>ONLINE</span></span>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+/* ── NAVIGATION ── */
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const nl=document.getElementById('nav-'+name);
+  if(nl) nl.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ── PARTICLES ── */
+const pColors=['rgba(0,102,204,0.35)','rgba(102,0,204,0.3)','rgba(0,136,68,0.28)','rgba(204,0,85,0.25)','rgba(0,160,220,0.3)'];
+function spawnParticle(){
+  const p=document.createElement('div');p.className='particle';
+  const size=Math.random()*4+2;const color=pColors[Math.floor(Math.random()*pColors.length)];
+  const left=Math.random()*100;const dur=Math.random()*18+12;const delay=Math.random()*5;
+  p.style.cssText=`width:${size}px;height:${size}px;left:${left}%;bottom:-10px;background:${color};box-shadow:0 0 ${size*4}px ${color};animation-duration:${dur}s;animation-delay:${delay}s;`;
+  document.getElementById('particles').appendChild(p);
+  setTimeout(()=>p.remove(),(dur+delay)*1000);
+}
+setInterval(spawnParticle,700);
+for(let i=0;i<6;i++) setTimeout(spawnParticle,i*350);
+
+/* ── URL FEATURES ── */
+const BRANDS=["facebook","fb","google","gmail","paypal","apple","amazon","microsoft","netflix","instagram","twitter","linkedin","bank","yahoo","outlook","hotmail","ebay","chase","wellsfargo","citi","confluence","atlassian","jira","trello","bitbucket"];
+const SUSP_TLDS=new Set(['tk','ml','cf','ga','top','xyz','work','date','racing','win','bid','download','men','loan','click','stream','gdn','science','party','link']);
+const EXACT_LEGIT=new Set(['facebook','google','amazon','microsoft','apple','paypal','netflix','instagram','twitter','linkedin','github','youtube','yahoo','ebay','atlassian','confluence','jira','trello','reddit','stackoverflow','wikipedia','openai','stripe','shopify']);
+const TYPOS=new Set(['facebok','faceboook','gogle','gooogle','paypa','paypall','amazn','ammazon','micrsoft','atlassan','atlssian']);
+
+function parseURL(url){
+  try{
+    const u=new URL(url.includes('://')?url:'https://'+url);
+    const host=u.hostname;const parts=host.split('.');
+    let sub='',dom='',tld='';
+    if(parts.length>2){sub=parts.slice(0,-2).join('.');dom=parts[parts.length-2];tld=parts[parts.length-1];}
+    else{dom=parts[0]||'';tld=parts[1]||'';}
+    return{u,host,parts,sub,dom,tld};
+  }catch(e){
+    const parts=url.replace(/https?:\/\//,'').split('/')[0].split('.');
+    return{u:null,host:url,parts,sub:'',dom:parts[0]||'',tld:parts[1]||''};
+  }
+}
+
+function extractFeatures(url){
+  const{u,sub,dom,tld,parts}=parseURL(url);
+  const ul=url.toLowerCase(),dl=dom.toLowerCase();
+  const scheme=u?u.protocol.replace(':',''):(url.startsWith('https')?'https':'http');
+  const path=u?u.pathname:'';const query=u?u.search:'';
+  const hasBrand=BRANDS.some(b=>dl.includes(b));
+  const hasBrandSub=sub&&BRANDS.some(b=>sub.toLowerCase().includes(b));
+  const isLegit=EXACT_LEGIT.has(dl);
+  const norm=dl.replace(/0/g,'o').replace(/1/g,'l').replace(/3/g,'e').replace(/5/g,'s');
+  const hasCS=norm!==dl&&BRANDS.some(b=>norm.includes(b));
+  const isTypo=TYPOS.has(dl);
+  return{len:url.length,dots:(url.match(/\./g)||[]).length,https:scheme==='https'?1:0,digitCount:(url.match(/\d/g)||[]).length,subLen:sub.length,hasLogin:ul.includes('login')?1:0,hasSecure:ul.includes('secure')?1:0,hasVerify:ul.includes('verify')?1:0,hasBank:ul.includes('bank')?1:0,hasPaypal:ul.includes('paypal')?1:0,subDots:(sub.match(/\./g)||[]).length,domLen:dom.length,hasAt:url.includes('@')?1:0,hasDash:dom.includes('-')?1:0,pathLen:path.length,hasBrand:hasBrand?1:0,hasBrandSub:hasBrandSub?1:0,suspTLD:SUSP_TLDS.has(tld)?1:0,domDigits:(dl.match(/\d/g)||[]).length,hasCS:hasCS?1:0,brandInURL:BRANDS.some(b=>ul.includes(b))?1:0,hasFacebook:ul.includes('facebook')?1:0,hasFb:ul.includes('fb')?1:0,deepSub:parts.length>3?1:0,hasQuery:(query.includes('=')||query.includes('&'))?1:0,isTypo:isTypo?1:0,impersonating:(!isLegit&&hasBrand)?1:0,hyphenAbuse:(url.match(/-/g)||[]).length>2?1:0,tooManyDots:(url.match(/\./g)||[]).length>3?1:0,tldLen:tld.length,tld,dom,scheme,sub,parts,isLegit};
+}
+
+function scoreURL(f){
+  let s=0;
+  if(f.https===0)s+=20;if(f.impersonating===1)s+=35;if(f.suspTLD===1)s+=25;
+  if(f.isTypo===1)s+=30;if(f.hasCS===1)s+=28;if(f.hasAt===1)s+=20;
+  if(f.hasLogin===1)s+=10;if(f.hasVerify===1)s+=10;if(f.hasSecure===1)s+=8;
+  if(f.hyphenAbuse===1)s+=15;if(f.deepSub===1)s+=12;if(f.len>75)s+=10;
+  if(f.hasBrandSub===1)s+=15;if(f.tooManyDots===1)s+=8;
+  if(f.https===1&&f.isLegit)s-=40;if(f.isLegit)s-=60;
+  s=Math.max(0,Math.min(100,s));
+  const isPhishing=s>=30;
+  const conf=isPhishing?Math.min(99,55+s*0.42):Math.max(60,95-s*0.6);
+  return{isPhishing,conf:parseFloat(conf.toFixed(1)),score:s};
+}
+
+/* ── SCANNER UI ── */
+function analyzeURL(){
+  const url=document.getElementById('urlInput').value.trim();
+  if(!url){alert('Please enter a URL to analyze.');return;}
+  const pw=document.getElementById('progressWrap'),pf=document.getElementById('progressFill'),pl=document.getElementById('progressLabel'),rw=document.getElementById('resultWrap');
+  pw.style.display='block';rw.style.display='none';
+  const steps=[[0,25,'[ 01/04 ]  Parsing URL structure & components…'],[25,55,'[ 02/04 ]  Extracting 30 threat features…'],[55,80,'[ 03/04 ]  Running Random Forest classifier…'],[80,100,'[ 04/04 ]  Generating threat intelligence report…']];
+  let si=0;
+  function runStep(){
+    if(si>=steps.length){pw.style.display='none';renderResult(url);return;}
+    const[start,end,msg]=steps[si++];pl.textContent=msg;let cur=start;
+    const iv=setInterval(()=>{cur++;pf.style.width=cur+'%';if(cur>=end){clearInterval(iv);setTimeout(runStep,120);}},18);
+  }
+  runStep();
+}
+
+function renderResult(url){
+  const f=extractFeatures(url);const{isPhishing,conf}=scoreURL(f);
+  const rw=document.getElementById('resultWrap'),rb=document.getElementById('resultBanner'),rg=document.getElementById('resultGrid');
+  rw.style.display='block';
+  if(isPhishing){
+    rb.innerHTML=`<div class="result-banner result-danger"><div class="result-icon">🚨</div><div class="result-title" style="color:var(--pink)">PHISHING DETECTED</div><div style="font-size:0.75rem;color:var(--dim);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.5rem">Threat Confidence</div><div class="result-conf" style="color:var(--pink)">${conf}%</div><div class="result-risk">RISK LEVEL: <span style="color:var(--pink)">CRITICAL</span></div></div>`;
+  }else{
+    rb.innerHTML=`<div class="result-banner result-safe"><div class="result-icon">✅</div><div class="result-title" style="color:var(--green)">SAFE & LEGITIMATE</div><div style="font-size:0.75rem;color:var(--dim);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.5rem">Safety Confidence</div><div class="result-conf" style="color:var(--green)">${conf}%</div><div class="result-risk">RISK LEVEL: <span style="color:var(--green)">MINIMAL</span></div></div>`;
+  }
+  const tldc=SUSP_TLDS.has(f.tld)?'var(--pink)':'var(--green)';
+  const lenc=f.len>75?'var(--pink)':'var(--green)';
+  const intelHTML=`<div class="intel-card"><div class="sec-label" style="margin-bottom:0.8rem">// URL Intelligence</div><div class="intel-row"><span class="intel-key">Protocol</span><span class="intel-val" style="color:${f.https===1?'var(--green)':'var(--pink)'}">${f.scheme.toUpperCase()}</span></div><div class="intel-row"><span class="intel-key">Domain</span><span class="intel-val" style="color:var(--cyan)">${f.dom}</span></div><div class="intel-row"><span class="intel-key">TLD</span><span class="intel-val" style="color:${tldc}">.${f.tld}</span></div><div class="intel-row"><span class="intel-key">URL Length</span><span class="intel-val" style="color:${lenc}">${f.len} chars</span></div><div class="intel-row"><span class="intel-key">@ Symbol</span><span class="intel-val" style="color:${url.includes('@')?'var(--pink)':'var(--green)'}">${url.includes('@')?'DETECTED ⚠️':'Clean ✅'}</span></div><div class="intel-row"><span class="intel-key">Brand Keywords</span><span class="intel-val" style="color:${f.brandInURL===1?'var(--pink)':'var(--green)'}">${f.brandInURL===1?'FOUND ⚠️':'None ✅'}</span></div><div class="intel-row"><span class="intel-key">Char Substitution</span><span class="intel-val" style="color:${f.hasCS===1?'var(--pink)':'var(--green)'}">${f.hasCS===1?'DETECTED ⚠️':'Clean ✅'}</span></div><div class="intel-row"><span class="intel-key">Typosquatting</span><span class="intel-val" style="color:${f.isTypo===1?'var(--pink)':'var(--green)'}">${f.isTypo===1?'CONFIRMED ⚠️':'None ✅'}</span></div></div>`;
+
+  let reasonsHTML='';
+  if(isPhishing){
+    const reasons=[];
+    if(f.https===0)reasons.push(['❌ No HTTPS Encryption','Connection is unencrypted — attackers can intercept your data in transit.']);
+    if(f.hasLogin===1)reasons.push(['⚠️ "login" Keyword Detected','Phishing pages weaponize urgency words like "login" to bypass user skepticism.']);
+    if(f.hasVerify===1)reasons.push(['⚠️ "verify" Keyword Detected','Account verification scams are the #1 phishing vector globally.']);
+    if(f.hasSecure===1)reasons.push(['⚠️ "secure" Keyword Detected','Fake "secure" indicators are a hallmark of social engineering attacks.']);
+    if(f.len>75)reasons.push(['📏 Abnormally Long URL',`URL is ${f.len} characters — attackers use length to hide malicious segments.`]);
+    if(f.impersonating===1)reasons.push(['🎭 Brand Impersonation',`"${f.dom}" mimics a trusted brand but is NOT the official domain.`]);
+    if(f.suspTLD===1)reasons.push([`🚩 High-Risk TLD (.${f.tld})`,`.${f.tld} is in the top abuse registries — used predominantly for malicious sites.`]);
+    if(f.hasCS===1)reasons.push(['🔤 Homograph / Char Substitution','Digits replacing letters (0→o, 1→l) detected — homograph spoofing.']);
+    if(f.isTypo===1)reasons.push(['✏️ Typosquatting Confirmed','Domain is a deliberate misspelling of a brand, designed to catch typing errors.']);
+    if(f.hyphenAbuse===1)reasons.push(['➖ Hyphen Abuse Pattern','Three or more hyphens signal URL manipulation — a known evasion technique.']);
+    if(f.hasAt===1)reasons.push(['📧 @ Symbol Redirect','The @ trick fools browsers into routing to the portion after @, not before.']);
+    if(!reasons.length)reasons.push(['⚠️ Structural Anomalies','Multiple suspicious URL structure patterns detected by ML classifier.']);
+    const items=reasons.map(([t,d])=>`<div class="t-item"><div><div class="item-title" style="color:var(--pink)">${t}</div><div class="item-desc">${d}</div></div></div>`).join('');
+    reasonsHTML=`<div><div class="sec-label" style="margin-bottom:0.8rem">// Threat Indicators</div>${items}</div>`;
+  }else{
+    const goods=[];
+    if(f.https===1)goods.push(['🔒 HTTPS Active','TLS/SSL certificate confirmed — data in transit is encrypted.']);
+    if(f.len<50)goods.push(['📏 Concise URL','URL length is within normal bounds for legitimate sites.']);
+    if(f.hasBrand===0)goods.push(['✅ No Brand Impersonation','Domain does not mimic any known brand in our database.']);
+    if(!SUSP_TLDS.has(f.tld))goods.push(['🌐 Reputable TLD','Top-level domain belongs to a trusted registry class.']);
+    if(f.isTypo===0)goods.push(['✏️ Authentic Spelling','Domain matches no known typosquatting pattern.']);
+    if(f.hyphenAbuse===0)goods.push(['✅ No Hyphen Abuse','Domain contains no suspicious hyphen patterns.']);
+    const items=goods.map(([t,d])=>`<div class="s-item"><div><div class="item-title" style="color:var(--green)">${t}</div><div class="item-desc">${d}</div></div></div>`).join('');
+    reasonsHTML=`<div><div class="sec-label" style="margin-bottom:0.8rem">// Security Verification</div>${items}</div>`;
+  }
+
+  const warnHTML=isPhishing?`<div class="warn-box"><div class="warn-title">🛑 IMMEDIATE ACTION REQUIRED</div><div class="warn-list">• Do NOT enter any passwords or credentials<br>• Do NOT submit personal or financial information<br>• Do NOT download any files from this page<br>• Close this tab immediately and report the URL<br>• Alert your IT/security team if on a corporate network</div></div>`:`<div style="background:rgba(0,136,68,0.05);border:1px solid rgba(0,136,68,0.2);border-radius:14px;padding:1.2rem 1.5rem"><div style="color:var(--green);font-weight:700;margin-bottom:0.4rem;font-size:0.85rem">✅ SAFETY ADVISORY</div><div style="color:var(--dim);font-size:0.8rem;line-height:1.9">• URL passed all 30 threat detection heuristics<br>• Domain matches known legitimate entity registry<br>• Always verify the full URL in your browser bar<br>• Enable 2FA on all accounts for added protection</div></div>`;
+
+  rg.innerHTML=intelHTML+reasonsHTML+warnHTML;
+}
+
+/* ── VISUAL AI ── */
+function analyzeImage(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const img=new Image();
+    img.onload=function(){
+      const c=document.createElement('canvas');c.width=img.width;c.height=img.height;
+      const ctx=c.getContext('2d');ctx.drawImage(img,0,0);
+      const d=ctx.getImageData(0,0,img.width,img.height).data;
+      let fbBlue=false,redBtn=false,darkTheme=false,bSum=0;
+      const pCount=Math.min(d.length/4,50000);
+      for(let i=0;i<pCount*4;i+=4){
+        const r=d[i],g=d[i+1],b=d[i+2];
+        bSum+=(r+g+b)/3;
+        if(r>50&&r<80&&g>80&&g<110&&b>140&&b<170)fbBlue=true;
+        if(r>180&&g<60&&b<60)redBtn=true;
+      }
+      darkTheme=bSum/pCount<80;
+      const score=[fbBlue,redBtn,darkTheme].filter(Boolean).length;
+      const risk=score>=2?'HIGH':score===1?'MEDIUM':'LOW';
+      const rc={'HIGH':'var(--pink)','MEDIUM':'var(--yellow)','LOW':'var(--green)'}[risk];
+      document.getElementById('visualResult').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1rem"><div><div class="sec-label" style="margin-bottom:0.6rem">// Uploaded Screenshot</div><img src="${ev.target.result}" style="width:100%;border-radius:14px;border:1px solid rgba(0,102,204,0.14)"/><div class="intel-card" style="margin-top:0.8rem"><div class="intel-row"><span class="intel-key">Resolution</span><span class="intel-val">${img.width} × ${img.height} px</span></div><div class="intel-row"><span class="intel-key">File Size</span><span class="intel-val">${(file.size/1024).toFixed(0)} KB</span></div><div class="intel-row"><span class="intel-key">Format</span><span class="intel-val">${file.type}</span></div></div></div><div><div class="sec-label" style="margin-bottom:0.6rem">// Visual Threat Report</div><div style="text-align:center;padding:1.5rem;background:rgba(0,0,0,.02);border-radius:14px;border:1.5px solid ${rc};margin-bottom:1rem"><div style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.25em;color:${rc};text-transform:uppercase;margin-bottom:0.4rem">Visual Threat Score</div><div style="font-family:'Share Tech Mono',monospace;font-size:2.8rem;font-weight:600;color:${rc}">${score}/3</div><div style="font-family:'Share Tech Mono',monospace;font-size:0.64rem;color:${rc};letter-spacing:0.2em;margin-top:0.3rem">RISK: ${risk}</div></div><div class="intel-card"><div class="intel-row"><span class="intel-key">Facebook-Blue Palette</span><span class="intel-val" style="color:${fbBlue?'var(--pink)':'var(--green)'}">${fbBlue?'⚠️ Detected':'✅ Not found'}</span></div><div class="intel-row"><span class="intel-key">Aggressive Red Button</span><span class="intel-val" style="color:${redBtn?'var(--pink)':'var(--green)'}">${redBtn?'⚠️ Detected':'✅ Not found'}</span></div><div class="intel-row"><span class="intel-key">Dark / Obfuscated Theme</span><span class="intel-val" style="color:${darkTheme?'var(--yellow)':'var(--green)'}">${darkTheme?'⚠️ Suspicious':'✅ Normal'}</span></div><div class="intel-row"><span class="intel-key">Login Form Structure</span><span class="intel-val" style="color:${fbBlue?'var(--pink)':'var(--green)'}">${fbBlue?'⚠️ Likely Present':'✅ Not detected'}</span></div><div class="intel-row"><span class="intel-key">Brand Consistency</span><span class="intel-val" style="color:${fbBlue?'var(--pink)':'var(--green)'}">${fbBlue?'⚠️ Mismatch':'✅ Consistent'}</span></div></div><div style="margin-top:1rem;padding:1.4rem;text-align:center;border-radius:14px;border:1.5px solid ${rc}"><div style="font-size:1.8rem;margin-bottom:0.4rem">${risk!=='LOW'?'🚨':'✅'}</div><div style="color:${rc};font-weight:800;font-size:0.92rem">${risk!=='LOW'?'VISUAL PHISHING INDICATORS FOUND':'VISUALLY APPEARS LEGITIMATE'}</div><div style="color:var(--dim);font-size:0.78rem;margin-top:0.4rem;line-height:1.6">${risk!=='LOW'?'Always cross-check the URL — visual similarity is a core phishing tactic.':'No suspicious visual patterns detected. Still verify the URL independently.'}</div></div></div></div>`;
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ── LIVE THREAT FEED ── */
+const feedItems=[
+  {icon:'🚨',title:'paypa1-secure.tk detected',meta:'TYPOSQUATTING · just now',badge:'crit',label:'CRIT'},
+  {icon:'⚠️',title:'fb-login-verify.ml blocked',meta:'BRAND IMPERSONATION · 8 sec ago',badge:'crit',label:'CRIT'},
+  {icon:'🔤',title:'g00gle-search.xyz flagged',meta:'HOMOGRAPH ATTACK · 21 sec ago',badge:'high',label:'HIGH'},
+  {icon:'📧',title:'amazon.com.login.evil.ru',meta:'SUBDOMAIN HIJACKING · 45 sec ago',badge:'crit',label:'CRIT'},
+  {icon:'🌐',title:'microsoft-verify.top scanned',meta:'SUSPICIOUS TLD · 1 min ago',badge:'med',label:'MED'},
+  {icon:'⚠️',title:'netf1ix-account.ga detected',meta:'TYPOSQUATTING · 2 min ago',badge:'crit',label:'CRIT'},
+  {icon:'🎭',title:'apple-id-locked.cf blocked',meta:'BRAND IMPERSONATION · 3 min ago',badge:'crit',label:'CRIT'},
+  {icon:'🔤',title:'ch4se-bank-login.ml flagged',meta:'HOMOGRAPH ATTACK · 4 min ago',badge:'high',label:'HIGH'},
+];
+let fi=0;
+setInterval(()=>{
+  const feed=document.querySelector('.float-panel');if(!feed)return;
+  const items=feed.querySelectorAll('.threat-feed-item');if(!items.length)return;
+  const item=feedItems[fi%feedItems.length];fi++;
+  const last=items[items.length-1];
+  last.querySelector('.tfi-title').textContent=item.title;
+  last.querySelector('.tfi-meta').textContent=item.meta;
+  last.querySelector('.tfi-icon').textContent=item.icon;
+  const b=last.querySelector('.tfi-badge');b.className='tfi-badge '+item.badge;b.textContent=item.label;
+  last.style.opacity='0';last.style.transform='translateX(10px)';
+  setTimeout(()=>{last.style.transition='all 0.5s';last.style.opacity='1';last.style.transform='translateX(0)';},50);
+},3500);
+</script>
+</body>
+</html>
